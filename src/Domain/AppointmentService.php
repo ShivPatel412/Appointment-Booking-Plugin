@@ -63,6 +63,7 @@ final class AppointmentService
             if ($id > 0) {
                 $result = $wpdb->update(Database::table('appointments'), $row, array('id' => $id));
             } else {
+                $row['reference'] = 'APT-' . strtoupper(wp_generate_password(10, false, false));
                 $row['created_by'] = get_current_user_id();
                 $row['created_at'] = current_time('mysql');
                 $result = $wpdb->insert(Database::table('appointments'), $row);

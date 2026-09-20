@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace ABP\Infrastructure;
 
+use ABP\Portal\PortalPages;
+
 final class Database
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '2.0.0';
 
     public static function table(string $name): string
     {
@@ -18,6 +20,8 @@ final class Database
     {
         if (get_option('abp_schema_version') !== self::VERSION) {
             self::migrate();
+            Capabilities::install();
+            PortalPages::install();
         }
     }
 
@@ -97,6 +101,7 @@ final class Database
             ) $charset;",
             "CREATE TABLE " . self::table('patients') . " (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                user_id bigint(20) unsigned NULL,
                 image_id bigint(20) unsigned NULL,
                 first_name varchar(100) NOT NULL,
                 last_name varchar(100) NOT NULL,
@@ -107,13 +112,15 @@ final class Database
                 address text NULL,
                 reference varchar(100) NOT NULL,
                 admin_notes text NULL,
+                account_status varchar(20) NOT NULL DEFAULT 'active',
                 active tinyint(1) NOT NULL DEFAULT 1,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY (id), UNIQUE KEY email (email), UNIQUE KEY reference (reference), KEY active (active), KEY patient_name (last_name, first_name)
+                PRIMARY KEY (id), UNIQUE KEY email (email), UNIQUE KEY reference (reference), UNIQUE KEY user_id (user_id), KEY active (active), KEY patient_name (last_name, first_name)
             ) $charset;",
             "CREATE TABLE " . self::table('appointments') . " (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                reference varchar(100) NULL,
                 doctor_id bigint(20) unsigned NOT NULL,
                 service_id bigint(20) unsigned NOT NULL,
                 patient_id bigint(20) unsigned NOT NULL,
@@ -122,10 +129,38 @@ final class Database
                 duration smallint unsigned NOT NULL,
                 status varchar(20) NOT NULL DEFAULT 'pending',
                 notes text NULL,
+                public_notes text NULL,
+                internal_notes text NULL,
                 created_by bigint(20) unsigned NOT NULL,
                 created_at datetime NOT NULL,
                 updated_at datetime NOT NULL,
-                PRIMARY KEY (id), KEY doctor_window (doctor_id, start_at, end_at), KEY patient_id (patient_id), KEY service_id (service_id), KEY status (status), KEY start_at (start_at)
+                PRIMARY KEY (id), UNIQUE KEY reference (reference), KEY doctor_window (doctor_id, start_at, end_at), KEY patient_id (patient_id), KEY service_id (service_id), KEY status (status), KEY start_at (start_at)
+            ) $charset;",
+            "CREATE TABLE " . self::table('prescriptions') . " (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                reference varchar(100) NOT NULL,
+                patient_id bigint(20) unsigned NOT NULL,
+                doctor_id bigint(20) unsigned NOT NULL,
+                appointment_id bigint(20) unsigned NOT NULL,
+                prescribed_on date NOT NULL,
+                diagnosis text NULL,
+                instructions text NULL,
+                additional_notes text NULL,
+                attachment_id bigint(20) unsigned NULL,
+                created_at datetime NOT NULL,
+                updated_at datetime NOT NULL,
+                PRIMARY KEY (id), UNIQUE KEY reference (reference), KEY patient_id (patient_id), KEY doctor_id (doctor_id), KEY appointment_id (appointment_id)
+            ) $charset;",
+            "CREATE TABLE " . self::table('prescription_items') . " (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                prescription_id bigint(20) unsigned NOT NULL,
+                medicine_name varchar(190) NOT NULL,
+                dosage varchar(190) NULL,
+                frequency varchar(190) NULL,
+                duration varchar(190) NULL,
+                instructions text NULL,
+                sort_order smallint unsigned NOT NULL DEFAULT 0,
+                PRIMARY KEY (id), KEY prescription_id (prescription_id), KEY sort_order (sort_order)
             ) $charset;",
             "CREATE TABLE " . self::table('notification_log') . " (
                 id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -142,6 +177,7 @@ final class Database
         foreach ($tables as $sql) {
             dbDelta($sql);
         }
+        $wpdb->query('UPDATE ' . self::table('appointments') . " SET reference=CONCAT('APT-',LPAD(id,8,'0')) WHERE reference IS NULL OR reference='' ");
         update_option('abp_schema_version', self::VERSION, false);
     }
 }

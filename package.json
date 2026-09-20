@@ -1,9 +1,9 @@
 {
   "name": "appointment-booking-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
-    "test": "node --check assets/admin.js && node tests/static-php-check.js"
+    "test": "node --check assets/admin.js && node --check assets/portal.js && node tests/static-php-check.js"
   },
   "devDependencies": {
     "php-parser": "^3.2.5"
