@@ -1,0 +1,10 @@
+.abp-modal-large{width:min(880px,100%)}
+.abp-editor-section{padding:4px 22px 20px;border-top:1px solid var(--abp-line)}
+.abp-editor-section h3{font-size:14px;margin:18px 0 12px}
+.abp-section-head{display:flex;align-items:center;justify-content:space-between}
+.abp-assignment,.abp-schedule-row,.abp-exception-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f2f6}
+.abp-assignment>.abp-check{min-width:220px}
+.abp-assignment>.abp-field{margin-left:auto;grid-template-columns:auto 110px;align-items:center}
+.abp-schedule-row>.abp-check{width:110px}
+.abp-schedule-row input[type=time],.abp-exception-row input[type=time]{width:120px}
+.abp-exception-row{flex-wrap:wrap}
