@@ -8,3 +8,51 @@
 .abp-schedule-row>.abp-check{width:110px}
 .abp-schedule-row input[type=time],.abp-exception-row input[type=time]{width:120px}
 .abp-exception-row{flex-wrap:wrap}
+.abp-app-native-menu{display:block!important;grid-template-columns:none!important;width:100%!important;min-height:calc(100vh - 32px)}
+.abp-app-native-menu>main{display:block!important;width:auto!important;min-width:0;padding:32px!important}
+.abp-error-state{display:grid;justify-items:start;gap:10px;padding:28px;border-left:4px solid #c33f55}
+.abp-error-state h1,.abp-error-state h2,.abp-error-state p{margin:0}
+@media(max-width:782px){.abp-app-native-menu>main{padding:20px 14px!important}}
+
+.abp-catalog-page{max-width:1500px;margin:0 auto}
+.abp-catalog-card{overflow:hidden;background:#fff;border:1px solid #e5eaf2;border-radius:16px;box-shadow:0 8px 30px rgba(15,23,42,.06)}
+.abp-catalog-single-tab{display:flex;border-bottom:1px solid #e7ebf2;background:#f8faff}
+.abp-catalog-single-tab button{padding:16px 24px;border:0!important;border-radius:0!important;background:#fff!important;color:#182033!important;font-weight:700}
+.abp-catalog-single-tab button.active{box-shadow:inset 0 -3px 0 #4f46e5}
+.abp-catalog-layout{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:560px}
+.abp-category-list{display:flex!important;flex-direction:column;gap:10px;padding:20px!important;background:#fff!important;color:#172036!important;border-right:1px solid #e3e8f0;box-sizing:border-box}
+.abp-add-category{width:100%;padding:12px!important;font-weight:700}
+.abp-category-row-wrap{position:relative;display:flex;align-items:stretch;border-left:4px solid #4f8df7;border-radius:7px;background:#fbfcff}
+.abp-category-row{display:flex!important;align-items:center;gap:11px;width:100%;min-height:62px;padding:10px 42px 10px 14px!important;border:1px solid transparent!important;background:transparent!important;text-align:left}
+.abp-category-row.active{border-color:#ddd9ff!important;background:#f3f1ff!important}
+.abp-category-row>i{display:grid;width:34px;height:34px;place-items:center;border-radius:50%;background:#eef4ff;color:#315fa7;font-style:normal;font-size:18px}
+.abp-category-row span{display:grid;gap:2px;min-width:0}
+.abp-category-row b{overflow:hidden;color:#1f2937;text-overflow:ellipsis;white-space:nowrap}
+.abp-category-row small{color:#8492aa;font-size:11px}
+.abp-category-edit{position:absolute;right:8px;top:50%;padding:5px 8px!important;border:0!important;background:transparent!important;transform:translateY(-50%);font-size:18px}
+.abp-service-list{min-width:0;padding:20px 28px 28px}
+.abp-catalog-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.abp-catalog-toolbar input[type=search]{width:min(360px,60%)}
+.abp-catalog-toolbar .abp-primary{min-width:130px;padding:11px 18px!important;font-weight:700}
+.abp-service-table td,.abp-service-table th{vertical-align:middle}
+.abp-service-name{display:flex;align-items:center;gap:10px;font-weight:700}
+.abp-service-name i{display:block;width:12px;height:32px;border-radius:999px}
+.abp-visible{color:#16a34a;font-weight:600}.abp-hidden{color:#94a3b8;font-weight:600}
+
+.abp-catalog-editor{max-width:1500px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 30px rgba(15,23,42,.07)}
+.abp-catalog-editor>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 28px;border-bottom:1px solid #e2e8f0}
+.abp-catalog-editor>header>div{display:flex;align-items:center;gap:14px;font-size:18px}.abp-catalog-editor>header strong{color:#4f46e5}.abp-catalog-editor>header button{border:0!important;background:transparent!important;font-size:28px}
+.abp-catalog-editor>.abp-notice{margin:18px 28px 0}
+.abp-catalog-editor>form{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;padding:28px}
+.abp-catalog-help{display:block!important;align-self:start;padding:20px!important;background:#f6f8fc!important;color:#334155!important;border-radius:12px!important;box-sizing:border-box}
+.abp-catalog-help strong{display:block;color:#4f46e5}.abp-catalog-help p{margin:16px 0 0;color:#64748b}
+.abp-catalog-editor-body{display:grid;gap:22px;min-width:0;padding:20px;border:1px solid #cddcf1;border-radius:12px}
+.abp-catalog-editor-body>.abp-form-grid{padding:0}
+.abp-catalog-visual{display:grid;place-items:center;align-content:center;gap:8px;min-height:150px;border:2px dashed #9aa9ef;border-radius:12px;background:#f0f5ff;color:#4f46e5}
+.abp-catalog-visual span{font-size:34px}.abp-service-main-fields{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;align-items:start}
+.abp-catalog-upload{display:grid;align-content:center;min-height:170px;padding:18px;border:2px dashed #9aa9ef;border-radius:50%;background:#f0f5ff}.abp-catalog-upload .abp-media-field{display:grid;gap:8px}.abp-catalog-upload input{width:100%}
+.abp-service-pricing{padding:20px!important;border-top:1px solid #e2e8f0}
+.abp-catalog-editor footer{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid #e2e8f0}
+.abp-catalog-editor footer button{min-width:110px;padding:10px 16px!important}.abp-catalog-editor footer .danger{color:#dc2626}
+@media(max-width:1000px){.abp-catalog-layout{grid-template-columns:1fr}.abp-category-list{border-right:0;border-bottom:1px solid #e3e8f0}.abp-catalog-editor>form{grid-template-columns:1fr}.abp-catalog-help{display:none!important}.abp-service-main-fields{grid-template-columns:1fr}.abp-catalog-upload{border-radius:14px}}
+@media(max-width:600px){.abp-service-list{padding:16px}.abp-catalog-toolbar{align-items:stretch;flex-direction:column}.abp-catalog-toolbar input[type=search]{width:100%}.abp-catalog-editor>form{padding:16px}.abp-catalog-editor-body{padding:14px}}

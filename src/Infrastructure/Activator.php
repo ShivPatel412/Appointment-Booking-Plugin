@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace ABP\Infrastructure;
 
-use ABP\Portal\PortalPages;
-
 final class Activator
 {
     public static function activate(): void
     {
         Database::migrate();
         Capabilities::install();
-        PortalPages::install();
         if (get_option('abp_settings', null) === null) {
             add_option('abp_settings', Settings::defaults(), '', false);
         }

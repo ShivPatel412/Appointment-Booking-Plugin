@@ -30,7 +30,7 @@ final class Api
         ));
         register_rest_route(self::NS, '/availability', array(
             'methods' => 'GET', 'callback' => array(self::class, 'availability'),
-            'permission_callback' => static fn(): bool => is_user_logged_in(),
+            'permission_callback' => array(self::class, 'canView'),
             'args' => array(
                 'doctor_id' => array('required' => true, 'sanitize_callback' => 'absint'),
                 'service_id' => array('required' => true, 'sanitize_callback' => 'absint'),
@@ -93,7 +93,8 @@ final class Api
             if ($id) {
                 return self::one($table, $id);
             }
-            return rest_ensure_response($wpdb->get_results("SELECT * FROM $table ORDER BY name", ARRAY_A)); // phpcs:ignore WordPress.DB.PreparedSQL
+            $rows = $wpdb->get_results("SELECT * FROM $table ORDER BY name", ARRAY_A); // phpcs:ignore WordPress.DB.PreparedSQL
+            return rest_ensure_response(is_array($rows) ? $rows : array());
         }
         if ($request->get_method() === 'DELETE') {
             $used = (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Database::table('services') . ' WHERE category_id=%d', $id));
@@ -130,7 +131,8 @@ final class Api
             }
             $search = sanitize_text_field($request->get_param('search') ?? '');
             $where = $search !== '' ? $wpdb->prepare(' WHERE s.name LIKE %s', '%' . $wpdb->esc_like($search) . '%') : '';
-            return rest_ensure_response($wpdb->get_results('SELECT s.*,c.name AS category_name FROM ' . $table . ' s LEFT JOIN ' . Database::table('categories') . ' c ON c.id=s.category_id' . $where . ' ORDER BY s.name', ARRAY_A));
+            $rows = $wpdb->get_results('SELECT s.*,c.name AS category_name FROM ' . $table . ' s LEFT JOIN ' . Database::table('categories') . ' c ON c.id=s.category_id' . $where . ' ORDER BY s.name', ARRAY_A);
+            return rest_ensure_response(is_array($rows) ? $rows : array());
         }
         if ($request->get_method() === 'DELETE') {
             return self::deactivate($table, $id);
@@ -142,13 +144,11 @@ final class Api
         if ($name === '' || $duration < 1 || ! $color) {
             return new WP_Error('abp_invalid_service', __('Name, positive duration, and valid color are required.', 'appointment-booking-plugin'), array('status' => 400));
         }
-        $imageId = absint($data['image_id'] ?? 0);
-        if ($imageId && ! wp_attachment_is_image($imageId)) return new WP_Error('abp_invalid_image', __('Select a valid image attachment.', 'appointment-booking-plugin'), array('status' => 422));
         $response = self::upsert($table, array(
             'category_id' => ($category = absint($data['category_id'] ?? 0)) ?: null,
             'name' => $name,
             'description' => sanitize_textarea_field($data['description'] ?? ''),
-            'image_id' => $imageId ?: null,
+            'image_id' => ($image = absint($data['image_id'] ?? 0)) ?: null,
             'color' => $color,
             'price' => max(0, (float) ($data['price'] ?? 0)),
             'duration' => $duration,
@@ -185,15 +185,9 @@ final class Api
         if ($name === '' || ! is_email($email)) {
             return new WP_Error('abp_invalid_doctor', __('Name and valid email are required.', 'appointment-booking-plugin'), array('status' => 400));
         }
-        $linkedUserId = absint($data['user_id'] ?? 0);
-        if ($linkedUserId && ! get_user_by('id', $linkedUserId)) {
-            return new WP_Error('abp_invalid_doctor_user', __('The linked WordPress user does not exist.', 'appointment-booking-plugin'), array('status' => 422));
-        }
-        $imageId = absint($data['image_id'] ?? 0);
-        if ($imageId && ! wp_attachment_is_image($imageId)) return new WP_Error('abp_invalid_image', __('Select a valid image attachment.', 'appointment-booking-plugin'), array('status' => 422));
         $response = self::upsert($table, array(
-            'user_id' => $linkedUserId ?: null,
-            'image_id' => $imageId ?: null,
+            'user_id' => ($user = absint($data['user_id'] ?? 0)) ?: null,
+            'image_id' => ($image = absint($data['image_id'] ?? 0)) ?: null,
             'name' => $name, 'email' => $email,
             'phone' => sanitize_text_field($data['phone'] ?? ''),
             'bio' => sanitize_textarea_field($data['bio'] ?? ''),
@@ -201,10 +195,6 @@ final class Api
         ), $id);
         if (is_wp_error($response)) return $response;
         $doctorId = (int) $response->get_data()['id'];
-        if ($linkedUserId) {
-            $linkedUser = get_user_by('id', $linkedUserId);
-            if ($linkedUser && ! in_array('administrator', $linkedUser->roles, true)) $linkedUser->add_role('abp_doctor');
-        }
         self::replaceDoctorRelations($doctorId, $data);
         return self::one($table, $doctorId);
     }
@@ -237,10 +227,8 @@ final class Api
         }
         $dob = self::dateOrNull($data['date_of_birth'] ?? '');
         if (($data['date_of_birth'] ?? '') && ! $dob) return new WP_Error('abp_invalid_dob', __('Date of birth must use YYYY-MM-DD.', 'appointment-booking-plugin'), array('status' => 400));
-        $imageId = absint($data['image_id'] ?? 0);
-        if ($imageId && ! wp_attachment_is_image($imageId)) return new WP_Error('abp_invalid_image', __('Select a valid image attachment.', 'appointment-booking-plugin'), array('status' => 422));
         return self::upsert($table, array(
-            'image_id' => $imageId ?: null,
+            'image_id' => ($image = absint($data['image_id'] ?? 0)) ?: null,
             'first_name' => $firstName, 'last_name' => $lastName, 'email' => $email,
             'phone' => sanitize_text_field($data['phone'] ?? ''), 'date_of_birth' => $dob,
             'gender' => sanitize_text_field($data['gender'] ?? ''),
@@ -320,7 +308,8 @@ final class Api
                 'patients' => (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Database::table('patients') . ' WHERE active=1'),
                 'doctors' => (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Database::table('doctors') . ' WHERE active=1'),
             )),
-            'activity' => $activity, 'recent' => $recent,
+            'activity' => is_array($activity) ? $activity : array(),
+            'recent' => is_array($recent) ? $recent : array(),
         ));
     }
 

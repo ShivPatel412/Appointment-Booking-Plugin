@@ -1,18 +1,10 @@
 (function (wp) {
   'use strict';
-  const { createElement: h, useEffect, useMemo, useState } = wp.element;
+  const { Component, createElement: h, useEffect, useMemo, useState } = wp.element;
   const apiFetch = wp.apiFetch;
   apiFetch.use(apiFetch.createNonceMiddleware(window.ABP_CONFIG.nonce));
   const base = '/appointment-booking/v1';
   const statuses = ['pending', 'approved', 'cancelled', 'rejected', 'completed', 'no-show'];
-  const pages = [
-    ['dashboard', 'Dashboard', 'chart-bar'], ['calendar', 'Calendar', 'calendar-alt'],
-    ['bookings', 'Bookings', 'book'], ['doctors', 'Employees / Doctors', 'businessperson'],
-    ['catalog', 'Catalog', 'screenoptions'], ['patients', 'Customers', 'groups'],
-    ['notifications', 'Notifications', 'email'], ['customize', 'Customize', 'admin-customizer'],
-    ['fields', 'Custom Fields', 'forms'], ['integrations', 'Features & Integrations', 'admin-plugins'],
-    ['settings', 'Settings', 'admin-generic']
-  ];
   const request = (path, options) => apiFetch(Object.assign({ path: base + path }, options || {}));
   const today = () => new Date().toISOString().slice(0, 10);
   const dateShift = (date, days) => { const d = new Date(date + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
@@ -28,9 +20,21 @@
     return h('div', { className: 'abp-notice ' + (notice.type || 'error'), role: 'alert' }, h('span', null, notice.text), h('button', { onClick: clear, 'aria-label': 'Dismiss' }, '×'));
   }
 
+  class AdminErrorBoundary extends Component {
+    constructor(props) { super(props); this.state = { error: null }; }
+    static getDerivedStateFromError(error) { return { error }; }
+    componentDidCatch(error, details) { window.console.error('Appointment admin screen failed to render.', error, details); }
+    render() {
+      if (!this.state.error) return this.props.children;
+      return h('div', { className: 'abp-panel abp-error-state', role: 'alert' }, h('h1', null, 'Unable to display Appointment'), h('p', null, 'An unexpected interface error occurred.'), h('button', { type: 'button', className: 'abp-primary', onClick: () => window.location.reload() }, 'Reload Appointment'));
+    }
+  }
+
   function Dashboard() {
-    const [data, setData] = useState(null); const [from, setFrom] = useState(today().slice(0, 8) + '01'); const [to, setTo] = useState(today());
-    useEffect(() => { request('/dashboard?from=' + from + '&to=' + to).then(setData); }, [from, to]);
+    const [data, setData] = useState(null); const [error, setError] = useState(''); const [from, setFrom] = useState(today().slice(0, 8) + '01'); const [to, setTo] = useState(today());
+    const load = () => { setError(''); request('/dashboard?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to)).then(payload => { const safe = payload && typeof payload === 'object' ? payload : {}; setData({ counts: safe.counts && typeof safe.counts === 'object' ? safe.counts : {}, activity: Array.isArray(safe.activity) ? safe.activity : [], recent: Array.isArray(safe.recent) ? safe.recent : [] }); }).catch(reason => { setData(null); setError(reason && reason.message ? reason.message : 'Unable to load dashboard data.'); }); };
+    useEffect(load, [from, to]);
+    if (error) return h('section', null, h('div', { className: 'abp-page-head' }, h('h1', null, 'Dashboard')), h('div', { className: 'abp-panel abp-error-state', role: 'alert' }, h('h2', null, 'Unable to load dashboard'), h('p', null, error), h('button', { type: 'button', className: 'abp-primary', onClick: load }, 'Retry')));
     if (!data) return h('p', null, 'Loading dashboard…');
     const cards = [['total', 'Total bookings'], ['today', "Today's bookings"], ['upcoming', 'Upcoming'], ['pending', 'Pending'], ['patients', 'Patients'], ['doctors', 'Doctors']];
     return h('section', null,
@@ -77,12 +81,72 @@
     ));
   }
 
+  function CategoryEditor({ value, onClose, onSaved, onDeleted }) {
+    const [form, setForm] = useState(Object.assign({ name: '', description: '', active: 1 }, value || {})); const [error, setError] = useState('');
+    const set = (key, val) => setForm(Object.assign({}, form, { [key]: val }));
+    const save = event => { event.preventDefault(); setError(''); request('/categories' + (form.id ? '/' + form.id : ''), { method: form.id ? 'PUT' : 'POST', data: form }).then(onSaved).catch(reason => setError(reason.message || 'Unable to save category.')); };
+    const remove = () => { if (!window.confirm('Delete this category? Categories containing services cannot be deleted.')) return; setError(''); request('/categories/' + form.id, { method: 'DELETE' }).then(onDeleted).catch(reason => setError(reason.message || 'Unable to delete category.')); };
+    return h('div', { className: 'abp-catalog-editor', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'abp-category-editor-title' },
+      h('header', null, h('div', null, h('span', null, 'Services'), h('b', null, '›'), h('strong', { id: 'abp-category-editor-title' }, form.id ? 'Edit category' : 'New category')), h('button', { type: 'button', onClick: onClose, 'aria-label': 'Close category editor' }, '×')),
+      error ? h('div', { className: 'abp-notice', role: 'alert' }, h('span', null, error)) : null,
+      h('form', { onSubmit: save },
+        h('aside', { className: 'abp-catalog-help' }, h('strong', null, '▣  Tips & suggestions'), h('p', null, 'Use clear category names so services are easy to find.')),
+        h('div', { className: 'abp-catalog-editor-body' },
+          h('div', { className: 'abp-catalog-visual' }, h('span', null, '▣'), h('b', null, 'Service category')),
+          h('div', { className: 'abp-form-grid' }, input('Name', form.name, value => set('name', value), 'text', { required: true }), h('label', { className: 'abp-field abp-wide' }, h('span', null, 'Description'), h('textarea', { value: form.description || '', onChange: event => set('description', event.target.value) })), h('label', { className: 'abp-check abp-wide' }, h('input', { type: 'checkbox', checked: Boolean(Number(form.active)), onChange: event => set('active', event.target.checked ? 1 : 0) }), 'Active'))
+        ),
+        h('footer', null, form.id ? h('button', { type: 'button', className: 'danger', onClick: remove }, 'Delete') : h('span'), h('div', { className: 'abp-actions' }, h('button', { type: 'button', onClick: onClose }, 'Close'), h('button', { type: 'submit', className: 'abp-primary' }, 'Save category')))
+      )
+    );
+  }
+
+  function ServiceEditor({ value, categories, onClose, onSaved, onDeactivated }) {
+    const [form, setForm] = useState(Object.assign({ name: '', category_id: '', description: '', color: '#4f46e5', price: '0.00', duration: 30, image_id: '', active: 1 }, value || {})); const [error, setError] = useState('');
+    const set = (key, val) => setForm(Object.assign({}, form, { [key]: val }));
+    const save = event => { event.preventDefault(); setError(''); request('/services' + (form.id ? '/' + form.id : ''), { method: form.id ? 'PUT' : 'POST', data: form }).then(onSaved).catch(reason => setError(reason.message || 'Unable to save service.')); };
+    const deactivate = () => { if (!window.confirm('Deactivate this service?')) return; request('/services/' + form.id, { method: 'DELETE' }).then(onDeactivated).catch(reason => setError(reason.message || 'Unable to deactivate service.')); };
+    const options = categories.map(category => ({ value: category.id, label: category.name }));
+    return h('div', { className: 'abp-catalog-editor', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'abp-service-editor-title' },
+      h('header', null, h('div', null, h('span', null, 'Services'), h('b', null, '›'), h('strong', { id: 'abp-service-editor-title' }, form.id ? 'Edit service' : 'New service')), h('button', { type: 'button', onClick: onClose, 'aria-label': 'Close service editor' }, '×')),
+      error ? h('div', { className: 'abp-notice', role: 'alert' }, h('span', null, error)) : null,
+      h('form', { onSubmit: save },
+        h('aside', { className: 'abp-catalog-help' }, h('strong', null, '☰  Details'), h('p', null, 'Add the service information customers need before booking.')),
+        h('div', { className: 'abp-catalog-editor-body' },
+          h('div', { className: 'abp-service-main-fields' }, h('div', { className: 'abp-catalog-upload' }, h(MediaField, { label: 'Service image', value: form.image_id, onChange: value => set('image_id', value) })), h('div', { className: 'abp-form-grid' }, input('Name', form.name, value => set('name', value), 'text', { required: true }), input('Color', form.color, value => set('color', value), 'color'), h('div', { className: 'abp-wide' }, select('Category', form.category_id, value => set('category_id', value), options)))),
+          h('label', { className: 'abp-field' }, h('span', null, 'Description'), h('textarea', { value: form.description || '', onChange: event => set('description', event.target.value), placeholder: 'Describe this service' })),
+          h('div', { className: 'abp-form-grid abp-service-pricing' }, input('Duration (minutes)', form.duration, value => set('duration', value), 'number', { min: 1, required: true }), input('Price', form.price, value => set('price', value), 'number', { min: 0, step: '.01' }), h('label', { className: 'abp-check abp-wide' }, h('input', { type: 'checkbox', checked: Boolean(Number(form.active)), onChange: event => set('active', event.target.checked ? 1 : 0) }), 'Visible and bookable'))
+        ),
+        h('footer', null, form.id ? h('button', { type: 'button', className: 'danger', onClick: deactivate }, 'Deactivate') : h('span'), h('div', { className: 'abp-actions' }, h('button', { type: 'button', onClick: onClose }, 'Close'), h('button', { type: 'submit', className: 'abp-primary' }, 'Save service')))
+      )
+    );
+  }
+
   function Catalog() {
-    const [tab, setTab] = useState('services'); const [categories, setCategories] = useState([]);
-    useEffect(() => { request('/categories').then(setCategories); }, [tab]);
-    const categoryOptions = categories.map(c => ({ value: c.id, label: c.name }));
-    return h('div', null, h('div', { className: 'abp-tabs' }, h('button', { className: tab === 'services' ? 'active' : '', onClick: () => setTab('services') }, 'Services'), h('button', { className: tab === 'categories' ? 'active' : '', onClick: () => setTab('categories') }, 'Categories')),
-      tab === 'categories' ? h(SimpleCrud, { resource: 'categories', title: 'Categories', fields: [{ key: 'name', label: 'Name', required: true }, { key: 'description', label: 'Description', type: 'textarea' }, { key: 'active', label: 'Active', type: 'checkbox' }], columns: [{ key: 'name', label: 'Name' }, { key: 'description', label: 'Description' }, { key: 'active', label: 'Status', render: r => Number(r.active) ? 'Active' : 'Inactive' }] }) : h(SimpleCrud, { resource: 'services', title: 'Services', deactivate: true, fields: [{ key: 'name', label: 'Name', required: true }, { key: 'category_id', label: 'Category', type: 'select', options: categoryOptions }, { key: 'description', label: 'Description', type: 'textarea' }, { key: 'color', label: 'Color', type: 'color' }, { key: 'price', label: 'Price', type: 'number', min: 0, step: '.01' }, { key: 'duration', label: 'Duration (minutes)', type: 'number', min: 1, required: true }, { key: 'image_id', label: 'Image', type: 'media' }, { key: 'active', label: 'Active', type: 'checkbox' }], columns: [{ key: 'name', label: 'Service' }, { key: 'category_name', label: 'Category' }, { key: 'duration', label: 'Duration', render: r => r.duration + ' min' }, { key: 'price', label: 'Price' }, { key: 'active', label: 'Status', render: r => Number(r.active) ? 'Active' : 'Inactive' }] })
+    const [categories, setCategories] = useState([]); const [services, setServices] = useState([]); const [selectedCategory, setSelectedCategory] = useState('all'); const [search, setSearch] = useState(''); const [editingCategory, setEditingCategory] = useState(null); const [editingService, setEditingService] = useState(null); const [notice, setNotice] = useState(null); const [loading, setLoading] = useState(true);
+    const load = () => { setLoading(true); setNotice(null); Promise.all([request('/categories'), request('/services')]).then(([categoryRows, serviceRows]) => { setCategories(Array.isArray(categoryRows) ? categoryRows : []); setServices(Array.isArray(serviceRows) ? serviceRows : []); setLoading(false); }).catch(reason => { setCategories([]); setServices([]); setLoading(false); setNotice({ text: reason.message || 'Unable to load the catalog.' }); }); };
+    useEffect(load, []);
+    const visibleServices = services.filter(service => (selectedCategory === 'all' || Number(service.category_id) === Number(selectedCategory)) && (!search || String(service.name || '').toLowerCase().includes(search.toLowerCase())));
+    const countFor = id => services.filter(service => Number(service.category_id) === Number(id)).length;
+    const completed = message => { setEditingCategory(null); setEditingService(null); load(); setNotice({ type: 'success', text: message }); };
+    if (editingCategory) return h(CategoryEditor, { value: editingCategory === 'new' ? null : editingCategory, onClose: () => setEditingCategory(null), onSaved: () => completed('Category saved.'), onDeleted: () => { setSelectedCategory('all'); completed('Category deleted.'); } });
+    if (editingService) return h(ServiceEditor, { value: editingService === 'new' ? null : editingService, categories, onClose: () => setEditingService(null), onSaved: () => completed('Service saved.'), onDeactivated: () => completed('Service deactivated.') });
+    return h('section', { className: 'abp-catalog-page' },
+      h('div', { className: 'abp-page-head' }, h('div', null, h('h1', null, '◆  Catalog'), h('p', null, 'Organize appointment services into clear categories.'))),
+      h(Notice, { notice, clear: () => setNotice(null) }),
+      h('div', { className: 'abp-catalog-card' },
+        h('div', { className: 'abp-catalog-single-tab', role: 'tablist', 'aria-label': 'Catalog type' }, h('button', { type: 'button', className: 'active', role: 'tab', 'aria-selected': 'true' }, 'Services')),
+        h('div', { className: 'abp-catalog-layout' },
+          h('aside', { className: 'abp-category-list' },
+            h('button', { type: 'button', className: 'abp-primary abp-add-category', onClick: () => setEditingCategory('new') }, '+ Add category'),
+            h('button', { type: 'button', className: 'abp-category-row ' + (selectedCategory === 'all' ? 'active' : ''), onClick: () => setSelectedCategory('all') }, h('span', null, h('b', null, 'All services'), h('small', null, services.length + (services.length === 1 ? ' service' : ' services')))),
+            categories.length ? categories.map(category => h('div', { className: 'abp-category-row-wrap', key: category.id }, h('button', { type: 'button', className: 'abp-category-row ' + (Number(selectedCategory) === Number(category.id) ? 'active' : ''), onClick: () => setSelectedCategory(category.id) }, h('i', { 'aria-hidden': 'true' }, '▣'), h('span', null, h('b', null, category.name), h('small', null, 'ID ' + category.id + ' · ' + countFor(category.id) + (countFor(category.id) === 1 ? ' service' : ' services')))), h('button', { type: 'button', className: 'abp-category-edit', onClick: () => setEditingCategory(category), 'aria-label': 'Edit ' + category.name }, '…'))) : h('p', { className: 'abp-empty' }, 'No categories yet.')
+          ),
+          h('div', { className: 'abp-service-list' },
+            h('div', { className: 'abp-catalog-toolbar' }, h('input', { type: 'search', value: search, placeholder: 'Search services', onChange: event => setSearch(event.target.value) }), h('button', { type: 'button', className: 'abp-primary', onClick: () => setEditingService('new') }, '+ Service')),
+            loading ? h('p', { className: 'abp-empty' }, 'Loading catalog…') : h('div', { className: 'abp-table-wrap' }, h('table', { className: 'abp-table abp-service-table' }, h('thead', null, h('tr', null, ['ID', 'Service', 'Category', 'Duration', 'Price', 'Visibility', 'Actions'].map(label => h('th', { key: label }, label)))), h('tbody', null, visibleServices.length ? visibleServices.map(service => h('tr', { key: service.id }, h('td', null, service.id), h('td', null, h('span', { className: 'abp-service-name' }, h('i', { style: { background: service.color || '#4f46e5' } }), service.name)), h('td', null, service.category_name || '—'), h('td', null, service.duration + ' min'), h('td', null, Number(service.price || 0).toFixed(2)), h('td', null, h('span', { className: Number(service.active) ? 'abp-visible' : 'abp-hidden' }, Number(service.active) ? '◉ Visible' : '○ Hidden')), h('td', null, h('button', { type: 'button', onClick: () => request('/services/' + service.id).then(setEditingService).catch(reason => setNotice({ text: reason.message })) }, 'Edit')))) : h('tr', null, h('td', { colSpan: 7, className: 'abp-empty' }, search ? 'No services match your search.' : 'No services in this category.')))))
+          )
+        )
+      )
     );
   }
 
@@ -96,7 +160,7 @@
     const addRow = (key, row) => set(key, form[key].concat([row])); const changeRow = (key, index, field, value) => set(key, form[key].map((r, i) => i === index ? Object.assign({}, r, { [field]: value }) : r)); const removeRow = (key, index) => set(key, form[key].filter((r, i) => i !== index));
     return h('div', { className: 'abp-modal-backdrop' }, h('form', { className: 'abp-modal abp-modal-large', onSubmit: e => { e.preventDefault(); request('/doctors' + (form.id ? '/' + form.id : ''), { method: form.id ? 'PUT' : 'POST', data: form }).then(onSaved).catch(err => setError(err.message)); } },
       h('header', null, h('h2', null, form.id ? 'Edit doctor' : 'Add doctor'), h('button', { type: 'button', onClick: onClose }, '×')), error && h('p', { className: 'abp-error' }, error),
-      h('div', { className: 'abp-form-grid' }, input('Name', form.name, v => set('name', v)), input('Email', form.email, v => set('email', v), 'email'), input('Phone', form.phone, v => set('phone', v), 'tel'), input('Linked WordPress user ID', form.user_id, v => set('user_id', v), 'number'), h(MediaField, { label: 'Profile image', value: form.image_id, onChange: v => set('image_id', v) }), h('label', { className: 'abp-field abp-wide' }, h('span', null, 'Description / bio'), h('textarea', { value: form.bio || '', onChange: e => set('bio', e.target.value) })), h('label', { className: 'abp-check abp-wide' }, h('input', { type: 'checkbox', checked: Boolean(Number(form.active)), onChange: e => set('active', e.target.checked ? 1 : 0) }), 'Active')),
+      h('div', { className: 'abp-form-grid' }, input('Name', form.name, v => set('name', v)), input('Email', form.email, v => set('email', v), 'email'), input('Phone', form.phone, v => set('phone', v), 'tel'), h(MediaField, { label: 'Profile image', value: form.image_id, onChange: v => set('image_id', v) }), h('label', { className: 'abp-field abp-wide' }, h('span', null, 'Description / bio'), h('textarea', { value: form.bio || '', onChange: e => set('bio', e.target.value) })), h('label', { className: 'abp-check abp-wide' }, h('input', { type: 'checkbox', checked: Boolean(Number(form.active)), onChange: e => set('active', e.target.checked ? 1 : 0) }), 'Active')),
       h('section', { className: 'abp-editor-section' }, h('h3', null, 'Assigned services & custom price'), services.length ? services.map(service => { const assigned = form.services.find(r => Number(r.service_id) === Number(service.id)); return h('div', { className: 'abp-assignment', key: service.id }, h('label', { className: 'abp-check' }, h('input', { type: 'checkbox', checked: Boolean(assigned), onChange: e => toggleService(service.id, e.target.checked) }), service.name), assigned && input('Doctor price', assigned.price, v => changeServicePrice(service.id, v), 'number', { min: 0, step: '.01' })); }) : h('p', { className: 'abp-empty' }, 'Create a service first.')),
       h('section', { className: 'abp-editor-section' }, h('h3', null, 'Weekly working hours'), days.map((name, day) => { const row = form.working_hours.find(r => Number(r.weekday) === day); return h('div', { className: 'abp-schedule-row', key: day }, h('label', { className: 'abp-check' }, h('input', { type: 'checkbox', checked: Boolean(row), onChange: e => toggleDay(day, e.target.checked) }), name), row && h('input', { type: 'time', value: String(row.start_time).slice(0, 5), onChange: e => changeDay(day, 'start_time', e.target.value) }), row && h('span', null, 'to'), row && h('input', { type: 'time', value: String(row.end_time).slice(0, 5), onChange: e => changeDay(day, 'end_time', e.target.value) })); })),
       h('section', { className: 'abp-editor-section' }, h('div', { className: 'abp-section-head' }, h('h3', null, 'Weekly breaks'), h('button', { type: 'button', onClick: () => addRow('breaks', { weekday: 1, start_time: '12:00', end_time: '13:00' }) }, '+ Break')), form.breaks.map((row, i) => h('div', { className: 'abp-schedule-row', key: i }, h('select', { value: row.weekday, onChange: e => changeRow('breaks', i, 'weekday', e.target.value) }, days.map((d, n) => h('option', { value: n, key: n }, d))), h('input', { type: 'time', value: String(row.start_time).slice(0, 5), onChange: e => changeRow('breaks', i, 'start_time', e.target.value) }), h('span', null, 'to'), h('input', { type: 'time', value: String(row.end_time).slice(0, 5), onChange: e => changeRow('breaks', i, 'end_time', e.target.value) }), h('button', { type: 'button', className: 'danger', onClick: () => removeRow('breaks', i) }, 'Remove')))),
@@ -178,8 +242,7 @@
 
   function Settings() {
     const [form, setForm] = useState(null); const [notice, setNotice] = useState(null); useEffect(() => { request('/settings').then(setForm); }, []); if (!form) return h('p', null, 'Loading settings…'); const set = (key, value) => setForm(Object.assign({}, form, { [key]: value }));
-    const toggle = (key, label) => h('label', { className: 'abp-check' }, h('input', { type: 'checkbox', checked: Boolean(form[key]), onChange: e => set(key, e.target.checked) }), label);
-    return h('section', null, h('div', { className: 'abp-page-head' }, h('div', null, h('h1', null, 'Settings'), h('p', null, 'Business details and global scheduling preferences.'))), h(Notice, { notice, clear: () => setNotice(null) }), h('form', { className: 'abp-panel abp-settings', onSubmit: e => { e.preventDefault(); request('/settings', { method: 'PUT', data: form }).then(setForm).then(() => setNotice({ type: 'success', text: 'Settings saved.' })).catch(err => setNotice({ text: err.message })); } }, h('div', { className: 'abp-form-grid' }, input('Business name', form.business_name, v => set('business_name', v)), input('Business email', form.business_email, v => set('business_email', v), 'email'), input('Business phone', form.business_phone, v => set('business_phone', v), 'tel'), input('Currency', form.currency, v => set('currency', v)), input('Date format', form.date_format, v => set('date_format', v)), input('Time format', form.time_format, v => set('time_format', v)), input('First day of week (0–6)', form.first_day_of_week, v => set('first_day_of_week', v), 'number', { min: 0, max: 6 }), input('Slot interval (minutes)', form.slot_interval, v => set('slot_interval', v), 'number', { min: 5, max: 120 }), select('Default appointment status', form.default_status, v => set('default_status', v), [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }]), h('label', { className: 'abp-field abp-wide' }, h('span', null, 'Business address'), h('textarea', { value: form.business_address, onChange: e => set('business_address', e.target.value) })), h('div', { className: 'abp-wide' }, h('h3', null, 'Patient portal controls'), toggle('patient_registration_enabled', 'Allow patient registration'), toggle('patient_reschedule_enabled', 'Allow patient rescheduling'), toggle('patient_cancellation_enabled', 'Allow patient cancellation'), toggle('patient_email_editable', 'Allow patients to change account email'))), h('button', { className: 'abp-primary' }, 'Save settings')));
+    return h('section', null, h('div', { className: 'abp-page-head' }, h('div', null, h('h1', null, 'Settings'), h('p', null, 'Business details and global scheduling preferences.'))), h(Notice, { notice, clear: () => setNotice(null) }), h('form', { className: 'abp-panel abp-settings', onSubmit: e => { e.preventDefault(); request('/settings', { method: 'PUT', data: form }).then(setForm).then(() => setNotice({ type: 'success', text: 'Settings saved.' })).catch(err => setNotice({ text: err.message })); } }, h('div', { className: 'abp-form-grid' }, input('Business name', form.business_name, v => set('business_name', v)), input('Business email', form.business_email, v => set('business_email', v), 'email'), input('Business phone', form.business_phone, v => set('business_phone', v), 'tel'), input('Currency', form.currency, v => set('currency', v)), input('Date format', form.date_format, v => set('date_format', v)), input('Time format', form.time_format, v => set('time_format', v)), input('First day of week (0–6)', form.first_day_of_week, v => set('first_day_of_week', v), 'number', { min: 0, max: 6 }), input('Slot interval (minutes)', form.slot_interval, v => set('slot_interval', v), 'number', { min: 5, max: 120 }), select('Default appointment status', form.default_status, v => set('default_status', v), [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }]), h('label', { className: 'abp-field abp-wide' }, h('span', null, 'Business address'), h('textarea', { value: form.business_address, onChange: e => set('business_address', e.target.value) }))), h('button', { className: 'abp-primary' }, 'Save settings')));
   }
 
   function Notifications() {
@@ -187,10 +250,11 @@
     return h('section', null, h('div', { className: 'abp-page-head' }, h('div', null, h('h1', null, 'Notifications'), h('p', null, 'Recent transactional email delivery attempts.'))), error && h('p', { className: 'abp-error' }, error), h('div', { className: 'abp-table-wrap' }, h('table', { className: 'abp-table' }, h('thead', null, h('tr', null, ['Sent at','Event','Recipient','Subject','Status'].map(v => h('th', { key: v }, v)))), h('tbody', null, rows.length ? rows.map(row => h('tr', { key: row.id }, h('td', null, row.created_at), h('td', null, row.event.replaceAll('_', ' ')), h('td', null, row.recipient), h('td', null, row.subject), h('td', null, h('span', { className: 'abp-status ' + (row.status === 'sent' ? 'approved' : 'rejected'), title: row.error || '' }, row.status)))) : h('tr', null, h('td', { colSpan: 5, className: 'abp-empty' }, 'No email attempts yet.'))))));
   }
 
-  function Placeholder({ title, text }) { return h('section', null, h('div', { className: 'abp-page-head' }, h('div', null, h('h1', null, title), h('p', null, text))), h('div', { className: 'abp-panel abp-empty' }, 'This navigation area is reserved; no post–Phase 1 functionality has been added.')); }
   function App() {
-    const [page, setPage] = useState('dashboard'); const content = { dashboard: h(Dashboard), calendar: h(Calendar), bookings: h(Bookings), doctors: h(Doctors), catalog: h(Catalog), patients: h(Patients), notifications: h(Notifications), customize: h(Placeholder, { title: 'Customize', text: 'Customization shell.' }), fields: h(Placeholder, { title: 'Custom Fields', text: 'Custom-field shell.' }), integrations: h(Placeholder, { title: 'Features & Integrations', text: 'Integration-ready shell; external calendars are outside Phase 1.' }), settings: h(Settings) };
-    return h('div', { className: 'abp-app' }, h('aside', null, h('div', { className: 'abp-brand' }, h('span', null, 'A'), h('div', null, h('b', null, 'Appointment'), h('small', null, 'Booking workspace'))), h('nav', { 'aria-label': 'Appointment sections' }, pages.map(([id, label, icon]) => h('button', { key: id, className: page === id ? 'active' : '', onClick: () => setPage(id) }, h('i', { className: 'dashicons dashicons-' + icon }), h('span', null, label))))), h('main', null, content[page]));
+    const page = (window.ABP_CONFIG && window.ABP_CONFIG.initialPage) || 'dashboard';
+    const content = { dashboard: h(Dashboard), calendar: h(Calendar), bookings: h(Bookings), doctors: h(Doctors), catalog: h(Catalog), patients: h(Patients), notifications: h(Notifications), settings: h(Settings) };
+    return h('div', { className: 'abp-app abp-app-native-menu' }, h('main', null, content[page] || content.dashboard));
   }
-  wp.element.createRoot(document.getElementById('abp-admin-app')).render(h(App));
+  const root = document.getElementById('abp-admin-app');
+  if (root) wp.element.createRoot(root).render(h(AdminErrorBoundary, null, h(App)));
 })(window.wp);

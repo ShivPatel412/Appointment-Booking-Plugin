@@ -13,14 +13,35 @@ final class Admin
     public static function registerMenu(): void
     {
         add_menu_page(
-            __('Appointments', 'appointment-booking-plugin'),
-            __('Appointments', 'appointment-booking-plugin'),
+            __('Appointment', 'appointment-booking-plugin'),
+            __('Appointment', 'appointment-booking-plugin'),
             Capabilities::VIEW,
             self::SLUG,
             array(self::class, 'render'),
             'dashicons-calendar-alt',
             26
         );
+
+        $pages = array(
+            'dashboard' => __('Dashboard', 'appointment-booking-plugin'),
+            'calendar' => __('Calendar', 'appointment-booking-plugin'),
+            'bookings' => __('Appointments', 'appointment-booking-plugin'),
+            'doctors' => __('Employee', 'appointment-booking-plugin'),
+            'catalog' => __('Catalog', 'appointment-booking-plugin'),
+            'patients' => __('Customers', 'appointment-booking-plugin'),
+            'notifications' => __('Notifications', 'appointment-booking-plugin'),
+            'settings' => __('Settings', 'appointment-booking-plugin'),
+        );
+        foreach ($pages as $page => $label) {
+            add_submenu_page(
+                self::SLUG,
+                $label,
+                $label,
+                Capabilities::VIEW,
+                $page === 'dashboard' ? self::SLUG : self::SLUG . '-' . $page,
+                array(self::class, 'render')
+            );
+        }
     }
 
     public static function render(): void
@@ -33,7 +54,18 @@ final class Admin
 
     public static function enqueue(string $hook): void
     {
-        if ($hook !== 'toplevel_page_' . self::SLUG) return;
+        if (strpos($hook, self::SLUG) === false) return;
+        $pageMap = array(
+            self::SLUG => 'dashboard',
+            self::SLUG . '-calendar' => 'calendar',
+            self::SLUG . '-bookings' => 'bookings',
+            self::SLUG . '-doctors' => 'doctors',
+            self::SLUG . '-catalog' => 'catalog',
+            self::SLUG . '-patients' => 'patients',
+            self::SLUG . '-notifications' => 'notifications',
+            self::SLUG . '-settings' => 'settings',
+        );
+        $requested = isset($_GET['page']) && is_string($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : self::SLUG;
         wp_enqueue_media();
         wp_enqueue_style('abp-admin', ABP_URL . 'assets/admin.css', array(), ABP_VERSION);
         wp_enqueue_style('abp-admin-extra', ABP_URL . 'assets/admin-extra.css', array('abp-admin'), ABP_VERSION);
@@ -44,6 +76,7 @@ final class Admin
             'root' => esc_url_raw(rest_url('appointment-booking/v1')),
             'nonce' => wp_create_nonce('wp_rest'),
             'canDelete' => current_user_can(Capabilities::DELETE),
+            'initialPage' => $pageMap[$requested] ?? 'dashboard',
         )) . ';', 'before');
     }
 }

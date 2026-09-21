@@ -19,10 +19,6 @@ final class Settings
             'first_day_of_week' => (int) get_option('start_of_week', 1),
             'default_status' => 'pending',
             'slot_interval' => 15,
-            'patient_registration_enabled' => true,
-            'patient_reschedule_enabled' => true,
-            'patient_cancellation_enabled' => true,
-            'patient_email_editable' => false,
         );
     }
 
@@ -45,10 +41,6 @@ final class Settings
             'first_day_of_week' => max(0, min(6, absint($input['first_day_of_week'] ?? 1))),
             'default_status' => in_array($input['default_status'] ?? '', $statuses, true) ? $input['default_status'] : 'pending',
             'slot_interval' => max(5, min(120, absint($input['slot_interval'] ?? 15))),
-            'patient_registration_enabled' => rest_sanitize_boolean($input['patient_registration_enabled'] ?? true),
-            'patient_reschedule_enabled' => rest_sanitize_boolean($input['patient_reschedule_enabled'] ?? true),
-            'patient_cancellation_enabled' => rest_sanitize_boolean($input['patient_cancellation_enabled'] ?? true),
-            'patient_email_editable' => rest_sanitize_boolean($input['patient_email_editable'] ?? false),
         );
     }
 }
