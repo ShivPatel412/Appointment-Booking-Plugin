@@ -19,6 +19,7 @@ final class AppointmentService
     {
         global $wpdb;
         $wasUpdate = $id > 0;
+        $notifyCustomer = ! array_key_exists('notify_customer', $data) || rest_sanitize_boolean($data['notify_customer']);
         $previous = $wasUpdate ? $this->get($id) : null;
         $doctorId = absint($data['doctor_id'] ?? 0);
         $serviceId = absint($data['service_id'] ?? 0);
@@ -73,7 +74,9 @@ final class AppointmentService
             }
             $saved = $this->get($id);
             $event = ! $wasUpdate ? 'appointment_created' : (($previous['start_at'] ?? '') !== $startAt ? 'appointment_rescheduled' : 'appointment_status_changed');
-            do_action('abp_appointment_event', $event, $saved);
+            if ($notifyCustomer) {
+                do_action('abp_appointment_event', $event, $saved);
+            }
             return $saved;
         } finally {
             $wpdb->query($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lockName));
@@ -84,7 +87,7 @@ final class AppointmentService
     {
         global $wpdb;
         return $wpdb->get_row($wpdb->prepare(
-            'SELECT a.*,d.name AS doctor_name,s.name AS service_name,p.first_name,p.last_name,p.email AS patient_email FROM ' . Database::table('appointments') . ' a INNER JOIN ' . Database::table('doctors') . ' d ON d.id=a.doctor_id INNER JOIN ' . Database::table('services') . ' s ON s.id=a.service_id INNER JOIN ' . Database::table('patients') . ' p ON p.id=a.patient_id WHERE a.id=%d',
+            'SELECT a.*,d.name AS doctor_name,s.name AS service_name,s.color,CONCAT(p.first_name," ",p.last_name) AS patient_name,p.first_name,p.last_name,p.email AS patient_email,p.phone AS patient_phone,p.date_of_birth AS patient_date_of_birth,p.gender AS patient_gender,p.reference AS patient_reference FROM ' . Database::table('appointments') . ' a INNER JOIN ' . Database::table('doctors') . ' d ON d.id=a.doctor_id INNER JOIN ' . Database::table('services') . ' s ON s.id=a.service_id INNER JOIN ' . Database::table('patients') . ' p ON p.id=a.patient_id WHERE a.id=%d',
             $id
         ), ARRAY_A) ?: null;
     }

@@ -1,6 +1,6 @@
 {
   "name": "appointment-phase-1",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "private": true,
   "scripts": {
     "test": "node --check assets/admin.js && node tests/static-php-check.js"

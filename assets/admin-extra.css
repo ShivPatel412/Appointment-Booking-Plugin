@@ -56,3 +56,115 @@
 .abp-catalog-editor footer button{min-width:110px;padding:10px 16px!important}.abp-catalog-editor footer .danger{color:#dc2626}
 @media(max-width:1000px){.abp-catalog-layout{grid-template-columns:1fr}.abp-category-list{border-right:0;border-bottom:1px solid #e3e8f0}.abp-catalog-editor>form{grid-template-columns:1fr}.abp-catalog-help{display:none!important}.abp-service-main-fields{grid-template-columns:1fr}.abp-catalog-upload{border-radius:14px}}
 @media(max-width:600px){.abp-service-list{padding:16px}.abp-catalog-toolbar{align-items:stretch;flex-direction:column}.abp-catalog-toolbar input[type=search]{width:100%}.abp-catalog-editor>form{padding:16px}.abp-catalog-editor-body{padding:14px}}
+
+/* Phase 1 calendar: one consistent month view and an appointment detail drawer. */
+.abp-month-toolbar{align-items:center!important;justify-content:space-between!important;gap:16px!important}
+.abp-month-navigation,.abp-month-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.abp-month-navigation strong{min-width:190px;color:#172036;font-size:17px;text-align:center}
+.abp-month-navigation button{min-width:42px}
+.abp-month-shell{overflow-x:auto;border:1px solid #dfe5ef;border-radius:14px;background:#fff}
+.abp-month-weekdays{display:grid;grid-template-columns:repeat(7,minmax(135px,1fr));min-width:945px;border-bottom:1px solid #e2e8f0;background:#f8faff}
+.abp-month-weekdays div{padding:12px 14px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase}
+.abp-month-calendar{display:grid!important;grid-template-columns:repeat(7,minmax(135px,1fr))!important;min-width:945px;border:0!important;border-radius:0!important}
+.abp-month-calendar .abp-day{min-height:145px!important;padding:10px!important;border-width:0 1px 1px 0!important;border-color:#e2e8f0!important;border-radius:0!important;background:#fff!important}
+.abp-month-calendar .abp-day:nth-child(7n){border-right:0!important}
+.abp-month-calendar .abp-day:nth-last-child(-n+7){border-bottom:0!important}
+.abp-month-calendar .abp-day.outside-month{background:#f8fafc!important}
+.abp-month-calendar .abp-day.outside-month .abp-day-header{opacity:.45}
+.abp-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#334155;font-size:13px;font-weight:700}
+.abp-day-header .today{padding:3px 7px;border-radius:999px;background:#4f46e5;color:#fff;font-size:10px;text-transform:uppercase}
+.abp-month-calendar .abp-event{display:block;width:100%;margin:0 0 6px;padding:7px 8px!important;border:1px solid #d9d5ff!important;border-left:4px solid var(--event-color,#4f46e5)!important;border-radius:7px!important;background:#f4f2ff!important;color:#28324a!important;text-align:left;box-shadow:none!important}
+.abp-month-calendar .abp-event b,.abp-month-calendar .abp-event small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.abp-month-calendar .abp-event small{margin-top:2px;color:#64748b}
+
+.abp-detail-backdrop{position:fixed;z-index:100000;inset:0;display:flex;justify-content:flex-end;padding:18px;background:rgba(15,23,42,.32);box-sizing:border-box}
+.abp-app .abp-appointment-drawer{display:block!important;overflow-y:auto;width:min(540px,100%);height:100%;padding:26px!important;border:1px solid #dbe3ee;border-radius:20px;background:#f5f7fb!important;color:#172036!important;box-shadow:0 18px 60px rgba(15,23,42,.24);box-sizing:border-box}
+.abp-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.abp-detail-header h2{margin:0;font-size:22px}
+.abp-detail-header button{border:0!important;background:transparent!important;color:#163f72!important;font-size:28px;line-height:1}
+.abp-detail-card{margin-bottom:16px;padding:22px;border:1px solid #e7ebf2;border-radius:18px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+.abp-detail-id{float:right;color:#334155;font-size:12px;font-weight:700}
+.abp-detail-service{text-align:center}
+.abp-detail-service-mark{display:grid;width:60px;height:60px;margin:0 auto 10px;place-items:center;border-radius:50%;background:#eff4ff;color:#315fa7;font-size:28px}
+.abp-detail-service h3{margin:0 0 16px;font-size:21px}
+.abp-detail-facts{display:flex;justify-content:center;gap:10px 18px;flex-wrap:wrap;color:#334155;font-size:13px}
+.abp-detail-facts span{white-space:nowrap}
+.abp-detail-note{margin-top:18px;padding:12px 14px;border:1px solid #cdd9eb;border-radius:10px;color:#334155;text-align:left}
+.abp-detail-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:18px;border-top:1px solid #e2e8f0}
+.abp-detail-actions select{width:auto;min-width:145px;margin:0;border-color:#bbf7d0!important;background:#f0fdf4!important;color:#15803d!important;font-weight:700}
+.abp-detail-patient h3{margin:0 0 12px;font-size:19px}
+.abp-detail-contacts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.abp-detail-contacts a,.abp-detail-contacts span{padding:7px 10px;border-radius:8px;background:#eff4ff;color:#315fa7;text-decoration:none}
+.abp-detail-patient dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0}
+.abp-detail-patient dt{color:#64748b;font-size:12px}.abp-detail-patient dd{margin:3px 0 0;color:#172036;font-weight:600}
+.abp-detail-total{display:flex;justify-content:space-between;align-items:center;margin:0;padding:16px 20px}
+.abp-detail-total strong:last-child{display:grid;width:28px;height:28px;place-items:center;border-radius:50%;background:#f1edff;color:#6d4aff}
+@media(max-width:780px){.abp-month-toolbar{align-items:stretch!important;flex-direction:column}.abp-month-filters>*{flex:1 1 150px}.abp-detail-backdrop{padding:0}.abp-app .abp-appointment-drawer{border-radius:0}.abp-detail-actions{align-items:stretch;flex-direction:column}.abp-detail-actions select{width:100%}}
+
+/* Phase 1 dashboard inspired by the supplied appointment analytics layout. */
+.abp-dashboard{display:grid;gap:20px}
+.abp-dashboard>.abp-page-head{margin-bottom:0}
+.abp-dashboard-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.abp-dashboard-card,.abp-dashboard-table,.abp-dashboard-quick article{border:1px solid #cdd9eb;border-radius:14px;background:#fff;box-shadow:0 3px 14px rgba(24,32,54,.035)}
+.abp-dashboard-card{position:relative;min-height:260px;padding:26px 30px;box-sizing:border-box}
+.abp-dashboard-card h2,.abp-dashboard-table h2{margin:0;color:#111827;font-size:22px;font-weight:600}
+.abp-dashboard-total{display:flex;align-items:center;gap:18px;margin-top:34px}
+.abp-dashboard-total>strong{font-size:48px;line-height:1;color:#101827}
+.abp-dashboard-total>span{font-size:19px;font-weight:600}.abp-dashboard-total .positive{color:#15935d}.abp-dashboard-total .negative{color:#dc4555}
+.abp-dashboard-spark{position:absolute;right:32px;bottom:22px;width:48%;height:100px;overflow:visible}
+.abp-dashboard-spark polyline{fill:none;stroke:#20b95b;stroke-linecap:round;stroke-linejoin:round;stroke-width:4}
+.abp-dashboard-card-empty{position:absolute;right:30px;bottom:28px;width:46%;margin:0;color:#8793a8;text-align:right}
+.abp-customer-mix{display:grid;gap:10px;margin:22px 0 0}
+.abp-customer-mix>div{display:grid;grid-template-columns:140px 1fr;align-items:center}
+.abp-customer-mix dt{display:flex;align-items:center;gap:10px;color:#60708c;font-size:17px}.abp-customer-mix dd{display:flex;gap:16px;margin:0;color:#111827;font-size:17px;font-weight:700}.abp-customer-mix dd span{color:#60708c;font-weight:500}
+.abp-customer-mix i{display:inline-block;width:20px;height:9px;border-radius:3px;background:#add1bc}.abp-customer-mix i.returning{background:#7459d9}
+.abp-customer-bar{position:absolute;right:30px;bottom:26px;left:30px;display:flex;height:10px;overflow:hidden;border-radius:999px;background:#edf1f8}.abp-customer-bar i:first-child{background:#add1bc}.abp-customer-bar i:last-child{background:#7459d9}
+.abp-dashboard-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.abp-dashboard-quick article{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}.abp-dashboard-quick span{color:#60708c}.abp-dashboard-quick strong{color:#111827;font-size:23px}
+.abp-dashboard-table{overflow:hidden}
+.abp-dashboard-table>h2{padding:23px 25px}
+.abp-table-scroll{overflow-x:auto;padding:0 25px}
+.abp-dashboard-table table{width:100%;border-collapse:collapse}
+.abp-dashboard-table th,.abp-dashboard-table td{padding:18px 16px;border-bottom:1px solid #dfe5ee;text-align:left;white-space:nowrap}
+.abp-dashboard-table th{color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.035em}
+.abp-dashboard-table td{height:52px;color:#172036;font-size:14px}
+.abp-dashboard-status{min-width:145px!important;border:0!important;border-radius:10px!important;font-weight:700;text-transform:capitalize}.abp-dashboard-status.approved,.abp-dashboard-status.completed{background:#e9f7ee!important;color:#18a957!important}.abp-dashboard-status.pending{background:#fff4d5!important;color:#8a5b00!important}.abp-dashboard-status.cancelled,.abp-dashboard-status.rejected,.abp-dashboard-status.no-show{background:#fde9ec!important;color:#a42c42!important}
+.abp-dashboard-pager{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:18px 25px}
+.abp-dashboard-pager>div{display:flex;align-items:center;gap:15px}.abp-dashboard-pager select{min-width:100px}.abp-dashboard-pager button{border:0!important;background:transparent!important;color:#274f82!important;font-size:24px}.abp-dashboard-pager button:disabled{color:#cbd5e1!important;cursor:not-allowed}.abp-dashboard-pager span{min-width:48px;text-align:center}
+.abp-trend-service{display:flex;align-items:center;gap:12px;font-weight:600}.abp-trend-service>i{display:block;width:28px;height:28px;border:8px solid #f1f5fb;border-radius:50%;box-sizing:border-box}
+.abp-load-cell{display:flex;align-items:center;gap:14px;min-width:240px}.abp-load-cell>span{display:block;overflow:hidden;width:100%;height:9px;border-radius:999px;background:#edf1f8}.abp-load-cell>span i{display:block;height:100%;min-width:0;border-radius:999px;background:#ff7a7f}.abp-load-cell strong{min-width:48px}
+@media(max-width:1050px){.abp-dashboard-summary{grid-template-columns:1fr}.abp-dashboard-quick{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.abp-dashboard-card{min-height:230px;padding:22px}.abp-dashboard-card h2,.abp-dashboard-table h2{font-size:19px}.abp-dashboard-total>strong{font-size:40px}.abp-dashboard-spark{right:22px;bottom:16px;width:55%}.abp-customer-bar{right:22px;left:22px}.abp-customer-mix>div{grid-template-columns:120px 1fr}.abp-dashboard-quick{grid-template-columns:1fr 1fr}.abp-table-scroll{padding:0 14px}.abp-dashboard-pager{align-items:stretch;flex-direction:column;padding:15px}.abp-dashboard-pager>div{justify-content:space-between}}
+
+/* Phase 1 two-step appointment editor. */
+.abp-booking-editor{overflow:hidden;border:1px solid #dce4ef;border-radius:16px;background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.08)}
+.abp-booking-editor.page{min-height:680px}
+.abp-booking-editor.overlay{overflow:auto;width:min(1320px,96vw);max-height:92vh}
+.abp-booking-editor>header{display:flex;align-items:center;justify-content:space-between;padding:24px 30px;border-bottom:1px solid #dfe5ee}
+.abp-booking-editor>header>div{display:flex;align-items:center;gap:14px;font-size:20px}.abp-booking-editor>header strong{color:#4938ce}.abp-booking-editor>header button{border:0!important;background:transparent!important;color:#174270!important;font-size:29px;line-height:1}
+.abp-booking-editor-layout{display:grid;grid-template-columns:290px minmax(0,1fr);min-height:500px}
+.abp-app .abp-booking-editor-layout>aside{display:flex!important;flex-direction:column;gap:34px;padding:26px 24px!important;border-right:1px solid #dfe5ee;background:#fff!important;color:#172036!important}
+.abp-booking-editor-layout aside nav{display:grid;gap:8px}
+.abp-booking-editor-layout aside nav button{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;width:100%;padding:15px 18px!important;border:0!important;background:#fff!important;color:#172036!important;text-align:left}
+.abp-booking-editor-layout aside nav button.active{background:#f4f1ff!important;color:#4f46e5!important}.abp-booking-editor-layout aside nav button small{color:#ff6b73;font-weight:700}
+.abp-booking-editor-layout aside>section{padding:20px;border-radius:12px;background:#f5f7fb}.abp-booking-editor-layout aside>section strong{color:#61718d}.abp-booking-editor-layout aside>section p{margin:14px 0 0;color:#61718d}
+.abp-booking-editor-layout>main{padding:26px 34px!important;background:#fff}
+.abp-booking-editor-layout>main>.abp-error{margin:0 0 16px;padding:10px 12px;border:1px solid #ffafb4;border-radius:8px;background:#fff0f1}
+.abp-booking-step{display:grid;gap:20px}
+.abp-booking-step .abp-field{gap:0}.abp-booking-step .abp-field>span{position:relative;z-index:1;width:max-content;margin:0 0 -9px 14px;padding:0 5px;background:#fff;color:#4777b0}
+.abp-booking-step input,.abp-booking-step select,.abp-booking-step textarea{min-height:52px!important;border-color:#77a5dc!important;border-radius:10px!important;padding:12px 16px!important;font-size:16px!important}
+.abp-booking-step textarea{min-height:110px!important}
+.abp-booking-date-time{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.abp-booking-notify{display:flex;align-items:center;gap:12px;font-size:16px;font-weight:700}.abp-booking-notify input{width:20px;min-height:20px!important;margin:0}
+.abp-booking-editor>footer{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:18px 30px;border-top:1px solid #dfe5ee}
+.abp-booking-editor>footer button{min-width:110px;padding:11px 18px!important;font-weight:700}
+.abp-customer-picker{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:18px;align-items:end}.abp-customer-picker>button{height:52px;font-size:16px;font-weight:700}
+.abp-customer-required{margin:0;padding:12px 14px;border:1px solid #ffafb4;border-radius:8px;background:#fff0f1;color:#e34b56}
+.abp-selected-customer{display:grid;gap:5px;padding:20px;border:1px solid #cfdced;border-radius:12px;background:#f8faff}.abp-selected-customer strong{font-size:18px}.abp-selected-customer span{color:#60708c}
+.abp-customer-modal-backdrop{z-index:100010}
+.abp-new-customer-modal{overflow:auto;width:min(620px,94vw);max-height:92vh;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.3)}
+.abp-new-customer-modal>header,.abp-new-customer-modal>footer{display:flex;align-items:center;justify-content:space-between;padding:22px 28px;border-bottom:1px solid #dfe5ee}.abp-new-customer-modal>header h2{margin:0;font-size:27px}.abp-new-customer-modal>header button{border:0!important;background:transparent!important;font-size:29px}.abp-new-customer-modal>.abp-error{margin:16px 28px 0}
+.abp-new-customer-fields{display:grid;gap:18px;padding:26px 28px}.abp-new-customer-fields .abp-field{gap:0}.abp-new-customer-fields .abp-field>span{position:relative;z-index:1;width:max-content;margin:0 0 -9px 14px;padding:0 5px;background:#fff;color:#4777b0}.abp-new-customer-fields input,.abp-new-customer-fields select,.abp-new-customer-fields textarea{min-height:54px!important;border-color:#77a5dc!important;border-radius:11px!important;padding:12px 16px!important;font-size:16px!important}.abp-new-customer-fields textarea{min-height:120px!important}
+.abp-new-customer-modal>footer{justify-content:flex-end;gap:14px;border-top:1px solid #dfe5ee;border-bottom:0}.abp-new-customer-modal>footer button{min-width:110px;padding:11px 18px!important;font-weight:700}
+@media(max-width:900px){.abp-booking-editor-layout{grid-template-columns:1fr}.abp-app .abp-booking-editor-layout>aside{gap:15px;border-right:0;border-bottom:1px solid #dfe5ee}.abp-booking-editor-layout aside nav{grid-template-columns:1fr 1fr}.abp-booking-editor-layout aside>section{display:none}.abp-booking-editor-layout>main{padding:22px!important}}
+@media(max-width:600px){.abp-booking-editor>header{padding:18px}.abp-booking-editor>header>div{gap:8px;font-size:16px}.abp-app .abp-booking-editor-layout>aside{padding:14px!important}.abp-booking-editor-layout aside nav button{padding:12px!important}.abp-booking-date-time,.abp-customer-picker{grid-template-columns:1fr}.abp-booking-editor>footer{align-items:stretch;flex-direction:column-reverse;padding:16px}.abp-booking-editor>footer button{width:100%}.abp-new-customer-fields{padding:20px}.abp-new-customer-modal>header,.abp-new-customer-modal>footer{padding:18px}}

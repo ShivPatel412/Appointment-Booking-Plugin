@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Appointment
  * Description: Secure appointment scheduling for service-based practices.
- * Version: 0.1.2
+ * Version: 0.1.5
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: ShivPatel412
@@ -15,7 +15,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('ABP_VERSION', '0.1.2');
+define('ABP_VERSION', '0.1.5');
 define('ABP_FILE', __FILE__);
 define('ABP_PATH', plugin_dir_path(__FILE__));
 define('ABP_URL', plugin_dir_url(__FILE__));

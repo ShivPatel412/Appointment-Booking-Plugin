@@ -295,21 +295,53 @@ final class Api
         global $wpdb;
         $from = self::dateOrNull($request->get_param('from')) ?: current_time('Y-m-01');
         $to = self::dateOrNull($request->get_param('to')) ?: current_time('Y-m-t');
+        if ($from > $to) {
+            $rangeStart = $from;
+            $from = $to;
+            $to = $rangeStart;
+        }
         $appointments = Database::table('appointments');
-        $counts = $wpdb->get_row($wpdb->prepare(
-            "SELECT COUNT(*) total, SUM(DATE(start_at)=%s) today, SUM(start_at>%s AND status IN ('pending','approved')) upcoming, SUM(status='pending') pending FROM $appointments WHERE DATE(start_at) BETWEEN %s AND %s",
-            current_time('Y-m-d'), current_time('mysql'), $from, $to
-        ), ARRAY_A);
+        $patients = Database::table('patients');
+        $services = Database::table('services');
+        $fromDate = new \DateTimeImmutable($from);
+        $toDate = new \DateTimeImmutable($to);
+        $periodDays = ((int) $fromDate->diff($toDate)->days) + 1;
+        $previousFrom = $fromDate->modify('-' . $periodDays . ' days')->format('Y-m-d');
+        $previousTo = $fromDate->modify('-1 day')->format('Y-m-d');
+        $currentTotal = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $appointments WHERE DATE(start_at) BETWEEN %s AND %s", $from, $to));
+        $previousTotal = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $appointments WHERE DATE(start_at) BETWEEN %s AND %s", $previousFrom, $previousTo));
+        $activePatients = (int) $wpdb->get_var("SELECT COUNT(*) FROM $patients WHERE active=1");
+        $counts = array(
+            'total' => $currentTotal,
+            'previous_total' => $previousTotal,
+            'total_change' => $previousTotal > 0 ? round((($currentTotal - $previousTotal) / $previousTotal) * 100, 1) : ($currentTotal > 0 ? 100 : 0),
+            'today' => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $appointments WHERE DATE(start_at)=%s", current_time('Y-m-d'))),
+            'upcoming' => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $appointments WHERE start_at>%s AND status IN ('pending','approved')", current_time('mysql'))),
+            'pending' => (int) $wpdb->get_var("SELECT COUNT(*) FROM $appointments WHERE status='pending'"),
+            'patients' => $activePatients,
+            'doctors' => (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Database::table('doctors') . ' WHERE active=1'),
+        );
         $activity = $wpdb->get_results($wpdb->prepare("SELECT DATE(start_at) day,COUNT(*) total FROM $appointments WHERE DATE(start_at) BETWEEN %s AND %s GROUP BY DATE(start_at) ORDER BY day", $from, $to), ARRAY_A);
-        $recent = $wpdb->get_results('SELECT a.*,d.name doctor_name,s.name service_name,CONCAT(p.first_name," ",p.last_name) patient_name FROM ' . $appointments . ' a INNER JOIN ' . Database::table('doctors') . ' d ON d.id=a.doctor_id INNER JOIN ' . Database::table('services') . ' s ON s.id=a.service_id INNER JOIN ' . Database::table('patients') . ' p ON p.id=a.patient_id ORDER BY a.created_at DESC LIMIT 8', ARRAY_A);
+        $upcoming = $wpdb->get_results($wpdb->prepare(
+            "SELECT a.*,d.name doctor_name,s.name service_name,s.color,CONCAT(p.first_name,' ',p.last_name) patient_name FROM $appointments a INNER JOIN " . Database::table('doctors') . " d ON d.id=a.doctor_id INNER JOIN $services s ON s.id=a.service_id INNER JOIN $patients p ON p.id=a.patient_id WHERE a.start_at>=%s AND a.status IN ('pending','approved') ORDER BY a.start_at LIMIT 50",
+            current_time('mysql')
+        ), ARRAY_A);
+        $trends = $wpdb->get_results($wpdb->prepare(
+            "SELECT s.id,s.name,s.color,COUNT(a.id) appointment_count,COALESCE(SUM(a.duration),0) duration_minutes FROM $services s LEFT JOIN $appointments a ON a.service_id=s.id AND DATE(a.start_at) BETWEEN %s AND %s WHERE s.active=1 GROUP BY s.id,s.name,s.color ORDER BY appointment_count DESC,s.name LIMIT 50",
+            $from,
+            $to
+        ), ARRAY_A);
+        $customerMix = $wpdb->get_row(
+            "SELECT COALESCE(SUM(CASE WHEN booking_count<=1 THEN 1 ELSE 0 END),0) new_customers,COALESCE(SUM(CASE WHEN booking_count>1 THEN 1 ELSE 0 END),0) returning_customers FROM (SELECT p.id,COUNT(a.id) booking_count FROM $patients p LEFT JOIN $appointments a ON a.patient_id=p.id WHERE p.active=1 GROUP BY p.id) customer_activity",
+            ARRAY_A
+        );
         return rest_ensure_response(array(
             'range' => array('from' => $from, 'to' => $to),
-            'counts' => array_merge($counts ?: array(), array(
-                'patients' => (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Database::table('patients') . ' WHERE active=1'),
-                'doctors' => (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Database::table('doctors') . ' WHERE active=1'),
-            )),
+            'counts' => $counts,
             'activity' => is_array($activity) ? $activity : array(),
-            'recent' => is_array($recent) ? $recent : array(),
+            'upcoming' => is_array($upcoming) ? $upcoming : array(),
+            'trends' => is_array($trends) ? $trends : array(),
+            'customer_mix' => is_array($customerMix) ? $customerMix : array('new_customers' => 0, 'returning_customers' => 0),
         ));
     }
 
@@ -343,8 +375,9 @@ final class Api
         if ($search = sanitize_text_field($request->get_param('search') ?? '')) {
             $like = '%' . $wpdb->esc_like($search) . '%'; $where[] = '(d.name LIKE %s OR s.name LIKE %s OR p.first_name LIKE %s OR p.last_name LIKE %s)'; array_push($args, $like, $like, $like, $like);
         }
-        $sql = 'SELECT a.*,d.name doctor_name,s.name service_name,s.color,CONCAT(p.first_name," ",p.last_name) patient_name,p.email patient_email FROM ' . Database::table('appointments') . ' a INNER JOIN ' . Database::table('doctors') . ' d ON d.id=a.doctor_id INNER JOIN ' . Database::table('services') . ' s ON s.id=a.service_id INNER JOIN ' . Database::table('patients') . ' p ON p.id=a.patient_id WHERE ' . implode(' AND ', $where) . ' ORDER BY a.start_at';
-        return $wpdb->get_results($args ? $wpdb->prepare($sql, ...$args) : $sql, ARRAY_A);
+        $sql = 'SELECT a.*,d.name doctor_name,s.name service_name,s.color,CONCAT(p.first_name," ",p.last_name) patient_name,p.email patient_email,p.phone patient_phone,p.date_of_birth patient_date_of_birth,p.gender patient_gender,p.reference patient_reference FROM ' . Database::table('appointments') . ' a INNER JOIN ' . Database::table('doctors') . ' d ON d.id=a.doctor_id INNER JOIN ' . Database::table('services') . ' s ON s.id=a.service_id INNER JOIN ' . Database::table('patients') . ' p ON p.id=a.patient_id WHERE ' . implode(' AND ', $where) . ' ORDER BY a.start_at';
+        $rows = $wpdb->get_results($args ? $wpdb->prepare($sql, ...$args) : $sql, ARRAY_A);
+        return is_array($rows) ? $rows : array();
     }
 
     private static function replaceDoctorRelations(int $doctorId, array $data): void
